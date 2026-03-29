@@ -14,7 +14,7 @@ exports.createExpense = async (req, res) => {
     );
 
     const expense = result.rows[0];
-    const expenseId = expense.rows[0].id;
+    const expenseId = expense.id;
 
     // Get approval config 
     const configRes = await pool.query(
@@ -68,6 +68,34 @@ exports.createExpense = async (req, res) => {
 
      res.json({ message: "Expense created with approval config", expense });
 
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getExpenses = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM expenses WHERE user_id=$1 ORDER BY date DESC`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getAllExpenses = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT e.*
+       FROM expenses e
+       JOIN users u ON e.user_id = u.id
+       WHERE u.company_id=$1
+       ORDER BY e.date DESC`,
+      [req.user.company_id]
+    );
+    res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
