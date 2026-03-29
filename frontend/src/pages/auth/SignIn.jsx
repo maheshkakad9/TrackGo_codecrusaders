@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-function SignIn({ onNavigateSignUp }) {
+function SignIn({ onNavigateSignUp, onLoginSuccess }) {
   const [form, setForm] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [showPass, setShowPass] = useState(false);
@@ -26,7 +26,8 @@ function SignIn({ onNavigateSignUp }) {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     const payload = { email: form.email.trim(), password: form.password };
     console.log('Sign-in payload:', payload);
-    // TODO: connect to backend auth
+    // TODO: validate credentials with backend, then call onLoginSuccess
+    if (onLoginSuccess) onLoginSuccess();
   };
 
   return (
