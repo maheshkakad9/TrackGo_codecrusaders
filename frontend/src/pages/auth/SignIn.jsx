@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-function SignIn({ onNavigateSignUp, onLoginSuccess }) {
+function SignIn({ onNavigateSignUp, onLoginSuccess, onLoginEmployee }) {
   const [form, setForm] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [showPass, setShowPass] = useState(false);
@@ -103,7 +103,15 @@ function SignIn({ onNavigateSignUp, onLoginSuccess }) {
             type="submit"
             className="mt-1 w-full py-[11px] rounded-lg bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 active:scale-[0.99] transition-all"
           >
-            Log in
+            Log in as Admin
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onLoginEmployee && onLoginEmployee()}
+            className="w-full py-[11px] rounded-lg border border-slate-300 bg-white text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors"
+          >
+            Open Employee Request Page
           </button>
         </form>
 

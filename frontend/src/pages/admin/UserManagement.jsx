@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import UserRules from './UserRules';
 
 const SEED_USERS = [
   { id: 1, username: 'alice_m',  role: 'manager',  email: 'alice@company.com',  managerId: null, passwordSent: false },
@@ -10,11 +11,14 @@ const ROLES = ['manager', 'employee'];
 const emptyDraft = { username: '', role: 'employee', email: '', managerId: '' };
 
 export default function UserManagement() {
+
   const [users, setUsers]             = useState(SEED_USERS);
   const [adding, setAdding]           = useState(false);
   const [draft, setDraft]             = useState(emptyDraft);
   const [draftErrors, setDraftErrors] = useState({});
   const [sending, setSending]         = useState(null);
+  const [showUserRules, setShowUserRules] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
 
   // List of managers derived from state
   const managers = users.filter(u => u.role === 'manager');
@@ -238,8 +242,7 @@ export default function UserManagement() {
                 users.map(user => {
                   const assignedManager = managers.find(m => m.id === user.managerId);
                   return (
-                    <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
-
+                    <tr key={user.id} className="hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={() => { setSelectedUser(user); setShowUserRules(true); }}>
                       {/* Username */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
@@ -249,7 +252,6 @@ export default function UserManagement() {
                           <span className="font-medium text-gray-800">{user.username}</span>
                         </div>
                       </td>
-
                       {/* Role badge */}
                       <td className="px-5 py-3.5">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
@@ -259,10 +261,8 @@ export default function UserManagement() {
                           {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                         </span>
                       </td>
-
                       {/* Email */}
                       <td className="px-5 py-3.5 text-gray-600 text-sm">{user.email}</td>
-
                       {/* Manager column */}
                       <td className="px-5 py-3.5">
                         {user.role === 'manager' ? (
@@ -272,6 +272,7 @@ export default function UserManagement() {
                             value={user.managerId ?? ''}
                             onChange={e => handleManagerChange(user.id, e.target.value)}
                             className="px-2.5 py-1.5 border-[1.5px] border-solid border-gray-200 rounded-md text-xs text-gray-700 bg-white outline-none cursor-pointer hover:border-gray-300 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:ring-offset-0 transition-all"
+                            onClick={e => e.stopPropagation()}
                           >
                             <option value="">No manager</option>
                             {managers.map(m => (
@@ -280,7 +281,6 @@ export default function UserManagement() {
                           </select>
                         )}
                       </td>
-
                       {/* Send Password */}
                       <td className="px-5 py-3.5 text-right">
                         {user.passwordSent ? (
@@ -292,7 +292,7 @@ export default function UserManagement() {
                           </span>
                         ) : (
                           <button
-                            onClick={() => handleSendPassword(user.id)}
+                            onClick={e => { e.stopPropagation(); handleSendPassword(user.id); }}
                             disabled={sending === user.id}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                           >
@@ -329,8 +329,28 @@ export default function UserManagement() {
           </p>
         )}
       </main>
-    </div>
-  );
+    {/* User Rules Modal/Panel */}
+    {showUserRules && selectedUser && (
+      <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-lg w-full max-w-5xl max-h-[90vh] overflow-auto relative">
+          <button
+            className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-2xl font-bold"
+            onClick={() => setShowUserRules(false)}
+            aria-label="Close"
+          >
+            &times;
+          </button>
+          <UserRules
+            user={selectedUser}
+            managers={managers}
+            onCancel={() => setShowUserRules(false)}
+            onSave={() => setShowUserRules(false)}
+          />
+        </div>
+      </div>
+    )}
+  </div>
+);
 }
 
 // ── Helper ───────────────────────────────────────────────────────
