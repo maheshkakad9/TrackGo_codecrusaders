@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-function SignIn({ onNavigateSignUp, onLoginSuccess, onLoginEmployee }) {
+function SignIn({ onNavigateSignUp, onLoginSuccess, onLoginEmployee, onLoginManager }) {
   const [form, setForm] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [showPass, setShowPass] = useState(false);
@@ -112,6 +112,14 @@ function SignIn({ onNavigateSignUp, onLoginSuccess, onLoginEmployee }) {
             className="w-full py-[11px] rounded-lg border border-slate-300 bg-white text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors"
           >
             Open Employee Request Page
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onLoginManager && onLoginManager()}
+            className="w-full py-[11px] rounded-lg border border-slate-300 bg-white text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors"
+          >
+            Open Manager Review Page
           </button>
         </form>
 

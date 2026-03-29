@@ -11,6 +11,7 @@ const INITIAL_REQUESTS = [
 		amount: 1850,
 		status: 'Submitted',
 		receiptName: '',
+		paidBy: 'employee',
 	},
 	{
 		id: 2,
@@ -22,6 +23,7 @@ const INITIAL_REQUESTS = [
 		amount: 920,
 		status: 'Draft',
 		receiptName: '',
+		paidBy: 'employee',
 	},
 	{
 		id: 3,
@@ -33,11 +35,23 @@ const INITIAL_REQUESTS = [
 		amount: 1200,
 		status: 'Approved',
 		receiptName: '',
+		paidBy: 'company',
 	},
 ];
 
 export default function EmployeeRequest() {
 	const [requests, setRequests] = useState(INITIAL_REQUESTS);
+	const [showCreatePage, setShowCreatePage] = useState(false);
+	const [newRequest, setNewRequest] = useState({
+		receiptName: '',
+		description: '',
+		category: 'Travel',
+		amount: '',
+		currency: 'INR',
+		expenseDate: '',
+		paidBy: 'employee',
+		remarks: '',
+	});
 
 	const summary = useMemo(() => {
 		const toSubmit = requests
@@ -62,6 +76,186 @@ export default function EmployeeRequest() {
 		);
 	};
 
+	const handlePaidByChange = (id, value) => {
+		setRequests((prev) =>
+			prev.map((item) => (item.id === id ? { ...item, paidBy: value } : item))
+		);
+	};
+
+	const handleNewRequestChange = (name, value) => {
+		setNewRequest((prev) => ({ ...prev, [name]: value }));
+	};
+
+	const handleNewReceiptUpload = (file) => {
+		if (!file) return;
+		handleNewRequestChange('receiptName', file.name);
+	};
+
+	const handleSubmitNewRequest = (e) => {
+		e.preventDefault();
+		if (!newRequest.description.trim()) return;
+
+		setRequests((prev) => [
+			{
+				id: Date.now(),
+				employee: 'Aarav Sharma',
+				description: newRequest.description.trim(),
+				date: newRequest.expenseDate || new Date().toISOString().slice(0, 10),
+				category: newRequest.category,
+				remarks: newRequest.remarks.trim(),
+				amount: Number(newRequest.amount || 0),
+				status: 'Draft',
+				receiptName: newRequest.receiptName,
+				paidBy: newRequest.paidBy,
+			},
+			...prev,
+		]);
+
+		setNewRequest({
+			receiptName: '',
+			description: '',
+			category: 'Travel',
+			amount: '',
+			currency: 'INR',
+			expenseDate: '',
+			paidBy: 'employee',
+			remarks: '',
+		});
+		setShowCreatePage(false);
+	};
+
+	if (showCreatePage) {
+		return (
+			<div className="min-h-screen bg-slate-50 px-6 py-8">
+				<div className="max-w-5xl mx-auto">
+					<form onSubmit={handleSubmitNewRequest} className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+						<div className="px-6 py-4 border-b border-slate-200 bg-slate-100 flex items-center justify-between gap-3">
+							<h1 className="text-lg font-semibold text-slate-800">Create New Expense Request</h1>
+							<label className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors">
+								Attach Receipt
+								<input
+									type="file"
+									className="hidden"
+									onChange={(e) => handleNewReceiptUpload(e.target.files?.[0])}
+								/>
+							</label>
+						</div>
+
+						{newRequest.receiptName && (
+							<div className="px-6 py-2 bg-blue-50 border-b border-blue-100 text-xs text-blue-700">
+								Attached: {newRequest.receiptName}
+							</div>
+						)}
+
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-6">
+							<div className="space-y-4">
+								<div>
+									<label className="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
+									<input
+										type="text"
+										value={newRequest.description}
+										onChange={(e) => handleNewRequestChange('description', e.target.value)}
+										required
+										className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+									/>
+								</div>
+
+								<div>
+									<label className="block text-sm font-medium text-slate-700 mb-1.5">Category</label>
+									<select
+										value={newRequest.category}
+										onChange={(e) => handleNewRequestChange('category', e.target.value)}
+										className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+									>
+										<option value="Travel">Travel</option>
+										<option value="Supplies">Supplies</option>
+										<option value="Utilities">Utilities</option>
+										<option value="Meals">Meals</option>
+										<option value="Other">Other</option>
+									</select>
+								</div>
+
+								<div>
+									<label className="block text-sm font-medium text-slate-700 mb-1.5">Expense Date</label>
+									<input
+										type="date"
+										value={newRequest.expenseDate}
+										onChange={(e) => handleNewRequestChange('expenseDate', e.target.value)}
+										className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+									/>
+								</div>
+							</div>
+
+							<div className="space-y-4">
+								<div>
+									<label className="block text-sm font-medium text-slate-700 mb-1.5">Total Amount Paid</label>
+									<div className="grid grid-cols-3 gap-2">
+										<select
+											value={newRequest.currency}
+											onChange={(e) => handleNewRequestChange('currency', e.target.value)}
+											className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+										>
+											<option value="INR">INR</option>
+											<option value="USD">USD</option>
+											<option value="EUR">EUR</option>
+										</select>
+										<input
+											type="number"
+											value={newRequest.amount}
+											onChange={(e) => handleNewRequestChange('amount', e.target.value)}
+											placeholder="0"
+											min="0"
+											step="0.01"
+											className="col-span-2 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+										/>
+									</div>
+								</div>
+
+								<div>
+									<label className="block text-sm font-medium text-slate-700 mb-1.5">Paid By</label>
+									<select
+										value={newRequest.paidBy}
+										onChange={(e) => handleNewRequestChange('paidBy', e.target.value)}
+										className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+									>
+										<option value="employee">Aarav Sharma (Self)</option>
+										<option value="company">Company</option>
+									</select>
+								</div>
+
+								<div>
+									<label className="block text-sm font-medium text-slate-700 mb-1.5">Remarks</label>
+									<textarea
+										rows={4}
+										value={newRequest.remarks}
+										onChange={(e) => handleNewRequestChange('remarks', e.target.value)}
+										className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 resize-none"
+									/>
+								</div>
+							</div>
+						</div>
+
+						<div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3">
+							<button
+								type="button"
+								onClick={() => setShowCreatePage(false)}
+								className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors"
+							>
+								Cancel
+							</button>
+							<button
+								type="submit"
+								className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+							>
+								Submit
+							</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className="min-h-screen bg-slate-50 px-6 py-8">
 			<div className="max-w-7xl mx-auto space-y-6">
@@ -69,6 +263,7 @@ export default function EmployeeRequest() {
 					<div className="flex items-center gap-3">
 						<button
 							type="button"
+							onClick={() => setShowCreatePage(true)}
 							className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition-colors"
 						>
 							+ New Request
@@ -114,6 +309,7 @@ export default function EmployeeRequest() {
 									<th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Category</th>
 									<th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Remarks</th>
 									<th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">Amt</th>
+									<th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Paid By</th>
 									<th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Status</th>
 									<th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Receipt</th>
 								</tr>
@@ -128,6 +324,16 @@ export default function EmployeeRequest() {
 										<td className="px-4 py-3 text-slate-700">{item.category}</td>
 										<td className="px-4 py-3 text-slate-600">{item.remarks}</td>
 										<td className="px-4 py-3 text-right font-medium text-slate-900">Rs {item.amount}</td>
+										<td className="px-4 py-3">
+											<select
+												value={item.paidBy}
+												onChange={(e) => handlePaidByChange(item.id, e.target.value)}
+												className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+											>
+												<option value="employee">{item.employee} (Self)</option>
+												<option value="company">Company</option>
+											</select>
+										</td>
 										<td className="px-4 py-3">
 											<span className={statusPillClass(item.status)}>{item.status}</span>
 										</td>
