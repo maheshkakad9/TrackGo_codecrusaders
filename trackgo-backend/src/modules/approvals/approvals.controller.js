@@ -87,6 +87,23 @@ exports.updateApproval = async (req, res) => {
       );
     }
 
+    // SPECIFIC APPROVER RULE (CFO)
+    if (config.specific_approver_id) {
+        const specificApproved = approvals.find(
+            a =>
+                a.approver_id === config.specific_approver_id &&
+                a.status === 'approved'
+        );
+
+    if (specificApproved) {
+        await pool.query(
+            `UPDATE expenses SET status='approved' WHERE id=$1`,
+            [expenseId]
+        );
+        return res.json({ message: "Approved by specific approver (CFO)" });
+      }
+    }
+
     // PERCENTAGE RULE
     let approvedCount = approvals.filter(a => a.status === 'approved').length;
     let total = approvals.length;
