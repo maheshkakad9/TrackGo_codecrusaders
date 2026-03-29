@@ -19,4 +19,8 @@ app.use('/api/users', require('./src/routes/users.routes.js'));
 
 //Approval Routes
 app.use('/api/approvals',require('./src/routes/approvals.routes.js'));
+
+//Rules Routes
+app.use('/api/rules',require('./src/routes/rules.routes.js'));
+
 module.exports = app;
