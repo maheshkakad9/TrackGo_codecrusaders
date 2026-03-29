@@ -16,4 +16,7 @@ app.use('/api/expenses', require('./src/routes/expense.routes.js'));
 
 //User Routes
 app.use('/api/users', require('./src/routes/users.routes.js'));
+
+//Approval Routes
+app.use('/api/approvals',require('./src/routes/approvals.routes.js'));
 module.exports = app;
