@@ -14,5 +14,6 @@ app.use('/api/auth', require('./src/routes/auth.routes.js'));
 //Expenses Routes
 app.use('/api/expenses', require('./src/routes/expense.routes.js'));
 
-
+//User Routes
+app.use('/api/users', require('./src/routes/users.routes.js'));
 module.exports = app;
