@@ -22,83 +22,95 @@ exports.updateApproval = async (req, res) => {
     const approvalId = req.params.id;
 
     // Update approval
-    const approval = await pool.query(
+    const approvalRes = await pool.query(
       `UPDATE approvals SET status=$1, comment=$2 WHERE id=$3 RETURNING *`,
       [status, comment, approvalId]
     );
 
-    const expenseId = approval.rows[0].expense_id;
+    const approval = approvalRes.rows[0];
+    const expenseId = approval.expense_id;
 
-    // Check all approvals for this expense
-    const allApprovals = await pool.query(
-      `SELECT * FROM approvals WHERE expense_id = $1`,
+    // Get all approvals
+    const allApprovalsRes = await pool.query(
+      `SELECT * FROM approvals WHERE expense_id=$1`,
       [expenseId]
     );
 
-    const approvals = allApprovals.rows;
+    const approvals = allApprovalsRes.rows;
 
-    // Get company rule
-    const rule = await pool.query(
-      `SELECT * FROM approval_rules WHERE company_id = $1 LIMIT 1`,
+    // Get config
+    const configRes = await pool.query(
+      `SELECT * FROM approval_configs WHERE company_id=$1 LIMIT 1`,
       [req.user.company_id]
     );
 
-    const ruleData = rule.rows[0];
+    const config = configRes.rows[0];
 
-    // If any rejected → reject expense
+    // Get approver config
+    const approverConfigRes = await pool.query(
+      `SELECT * FROM config_approvers WHERE config_id=$1`,
+      [config.id]
+    );
+
+    const approverConfig = approverConfigRes.rows;
+
+    // REQUIRED APPROVER CHECK
+    for (let reqA of approverConfig.filter(a => a.is_required)) {
+      const found = approvals.find(a => a.approver_id === reqA.approver_id);
+
+      if (found?.status === 'rejected') {
+        await pool.query(
+          `UPDATE expenses SET status='rejected' WHERE id=$1`,
+          [expenseId]
+        );
+        return res.json({ message: "Rejected by required approver" });
+      }
+    }
+
+    // ANY REJECT → reject
     if (approvals.some(a => a.status === 'rejected')) {
       await pool.query(
         `UPDATE expenses SET status='rejected' WHERE id=$1`,
         [expenseId]
       );
-      return res.json({ message: 'Expense rejected' });
+      return res.json({ message: "Expense rejected" });
     }
 
+    // SEQUENCE LOGIC
+    if (config.is_sequence && status === 'approved') {
+      const nextStep = approval.step_order + 1;
+
+      await pool.query(
+        `UPDATE approvals SET status='pending'
+         WHERE expense_id=$1 AND step_order=$2`,
+        [expenseId, nextStep]
+      );
+    }
+
+    // PERCENTAGE RULE
     let approvedCount = approvals.filter(a => a.status === 'approved').length;
     let total = approvals.length;
-    
-    // RULE: SPECIFIC APPROVER
-    if (ruleData?.type === 'specific' || ruleData?.type === 'hybrid') {
-      const specificApproved = approvals.find(
-        a => a.approver_id === ruleData.specific_approver_id && a.status === 'approved'
-      );
 
-      if (specificApproved) {
-        await pool.query(
-          `UPDATE expenses SET status='approved' WHERE id=$1`,
-          [expenseId]
-        );
-        return res.json({ message: 'Approved by specific approver rule' });
-      }
-    }
+    let percent = (approvedCount / total) * 100;
 
-    // RULE: PERCENTAGE
-    
-    if (ruleData?.type === 'specific' || ruleData?.type === 'hybrid') {
-      const specificApproved = approvals.find(
-        a => a.approver_id === ruleData.specific_approver_id && a.status === 'approved'
-      );
-
-      if (specificApproved) {
-        await pool.query(
-          `UPDATE expenses SET status='approved' WHERE id=$1`,
-          [expenseId]
-        );
-        return res.json({ message: 'Approved by specific approver rule' });
-      }
-    }
-
-
-    // fallback: all approved
-    if (approvedCount === total) {
+    if (percent >= config.min_approval_percentage) {
       await pool.query(
         `UPDATE expenses SET status='approved' WHERE id=$1`,
         [expenseId]
       );
-      return res.json({ message: 'Fully approved' });
+      return res.json({ message: "Approved by percentage rule" });
     }
 
-    res.json({ message: 'Approval updated (waiting for others)' });
+    // FINAL CHECK
+    if (approvals.every(a => a.status === 'approved')) {
+      await pool.query(
+        `UPDATE expenses SET status='approved' WHERE id=$1`,
+        [expenseId]
+      );
+      return res.json({ message: "Fully approved" });
+    }
+
+    res.json({ message: "Approval updated, waiting..." });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
