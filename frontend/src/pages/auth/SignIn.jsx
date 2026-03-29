@@ -4,6 +4,7 @@ function SignIn({ onNavigateSignUp, onLoginSuccess, onLoginEmployee, onLoginMana
   const [form, setForm] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [showPass, setShowPass] = useState(false);
+  const [apiError, setApiError] = useState('');
 
   const validate = () => {
     const e = {};
@@ -18,21 +19,46 @@ function SignIn({ onNavigateSignUp, onLoginSuccess, onLoginEmployee, onLoginMana
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+    if (apiError) setApiError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
     const payload = { email: form.email.trim(), password: form.password };
-    console.log('Sign-in payload:', payload);
-    // TODO: validate credentials with backend, then call onLoginSuccess
-    if (onLoginSuccess) onLoginSuccess();
+
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const res = await fetch(`${baseUrl}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setApiError(data.message || data.error || 'Login failed.');
+        return;
+      }
+
+      const role = data?.user?.role;
+      if (role === 'manager' && onLoginManager) {
+        onLoginManager();
+      } else if (role === 'employee' && onLoginEmployee) {
+        onLoginEmployee();
+      } else if (onLoginSuccess) {
+        onLoginSuccess();
+      }
+    } catch (error) {
+      setApiError('Unable to connect to server. Using admin demo access.');
+      if (onLoginSuccess) onLoginSuccess();
+    }
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-100 flex items-center justify-center px-4 py-10">
-      <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-8 w-full max-w-md">
+    <div className="min-h-screen w-full bg-[#f8f9fa] flex items-center justify-center px-4 py-10">
+      <div className="bg-white rounded-sm shadow-sm border border-gray-200 p-8 w-full max-w-md">
 
         {/* Header */}
         <div className="text-center mb-8">
@@ -68,7 +94,7 @@ function SignIn({ onNavigateSignUp, onLoginSuccess, onLoginEmployee, onLoginMana
               </label>
               <a
                 href="#"
-                className="text-xs text-indigo-600 font-medium hover:underline"
+                className="text-xs text-[#6b4c6a] font-medium hover:text-[#5a3f59] hover:underline"
                 onClick={(e) => e.preventDefault()}
               >
                 Forgot password?
@@ -98,10 +124,12 @@ function SignIn({ onNavigateSignUp, onLoginSuccess, onLoginEmployee, onLoginMana
           </div>
 
           {/* Submit */}
+          {apiError && <p className="text-xs text-red-500 -mb-1">{apiError}</p>}
+
           <button
             id="signin-submit-btn"
             type="submit"
-            className="mt-1 w-full py-[11px] rounded-lg bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 active:scale-[0.99] transition-all"
+            className="mt-1 w-full py-[11px] rounded-md bg-[#6b4c6a] text-white font-semibold text-sm hover:bg-[#5a3f59] active:scale-[0.99] transition-all"
           >
             Log in as Admin
           </button>
@@ -109,7 +137,7 @@ function SignIn({ onNavigateSignUp, onLoginSuccess, onLoginEmployee, onLoginMana
           <button
             type="button"
             onClick={() => onLoginEmployee && onLoginEmployee()}
-            className="w-full py-[11px] rounded-lg border border-slate-300 bg-white text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors"
+            className="w-full py-[11px] rounded-md border border-gray-300 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors"
           >
             Open Employee Request Page
           </button>
@@ -117,7 +145,7 @@ function SignIn({ onNavigateSignUp, onLoginSuccess, onLoginEmployee, onLoginMana
           <button
             type="button"
             onClick={() => onLoginManager && onLoginManager()}
-            className="w-full py-[11px] rounded-lg border border-slate-300 bg-white text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors"
+            className="w-full py-[11px] rounded-md border border-gray-300 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors"
           >
             Open Manager Review Page
           </button>
@@ -129,7 +157,7 @@ function SignIn({ onNavigateSignUp, onLoginSuccess, onLoginEmployee, onLoginMana
           <button
             type="button"
             onClick={onNavigateSignUp}
-            className="text-indigo-600 font-semibold hover:underline bg-transparent border-none cursor-pointer p-0"
+            className="text-[#6b4c6a] font-semibold hover:text-[#5a3f59] hover:underline bg-transparent border-none cursor-pointer p-0"
           >
             Sign up
           </button>
@@ -143,10 +171,10 @@ function SignIn({ onNavigateSignUp, onLoginSuccess, onLoginEmployee, onLoginMana
 // ── Helpers ────────────────────────────────────────────────────────
 function inputClass(hasError) {
   const base =
-    'w-full px-4 py-[10px] border-[1.5px] border-solid rounded-lg text-sm text-slate-800 bg-white outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-offset-0';
+    'w-full px-4 py-[10px] border-[1.5px] border-solid rounded-md text-sm text-slate-800 bg-white outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-offset-0';
   return hasError
     ? `${base} border-red-400 focus:ring-red-200`
-    : `${base} border-slate-300 focus:border-indigo-500 focus:ring-indigo-100`;
+    : `${base} border-gray-300 focus:border-[#6b4c6a] focus:ring-[#e8dfec]`;
 }
 
 function Eye() {

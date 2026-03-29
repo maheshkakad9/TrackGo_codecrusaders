@@ -342,6 +342,7 @@ export default function UserManagement() {
           </button>
           <UserRules
             user={selectedUser}
+            users={users}
             managers={managers}
             onCancel={() => setShowUserRules(false)}
             onSave={() => setShowUserRules(false)}

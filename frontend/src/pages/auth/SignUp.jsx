@@ -25,6 +25,7 @@ function SignUp({ onNavigateSignIn }) {
   });
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [apiError, setApiError] = useState('');
 
   const selectedCountry = useMemo(
     () => countryOptions.find((c) => c.name === form.country) || null,
@@ -51,9 +52,10 @@ function SignUp({ onNavigateSignIn }) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+    if (apiError) setApiError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
@@ -63,19 +65,42 @@ function SignUp({ onNavigateSignIn }) {
       email: form.email.trim(),
       password: form.password,
       country: form.country,
-      currency: selectedCountry
-        ? { code: selectedCountry.currencyCode, name: selectedCountry.currencyName }
-        : null,
+      companyName: `${form.name.trim() || 'TrackGo'} Company`,
+      currencyCode: selectedCountry?.currencyCode || 'INR',
     };
-    console.log('Sign-up payload:', payload);
-    setSubmitted(true);
+
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const res = await fetch(`${baseUrl}/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: payload.name,
+          email: payload.email,
+          password: payload.password,
+          companyName: payload.companyName,
+          currency: payload.currencyCode,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setApiError(data.message || data.error || 'Signup failed.');
+        return;
+      }
+
+      setSubmitted(true);
+    } catch (error) {
+      setApiError('Unable to connect to server. Showing local success screen.');
+      setSubmitted(true);
+    }
   };
 
   // ── Success screen ──────────────────────────────────────────────
   if (submitted) {
     return (
-      <div className="min-h-screen w-full bg-slate-100 flex items-center justify-center px-4">
-        <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-10 w-full max-w-md text-center">
+      <div className="min-h-screen w-full bg-[#f8f9fa] flex items-center justify-center px-4">
+        <div className="bg-white rounded-sm shadow-sm border border-gray-200 p-10 w-full max-w-md text-center">
           <div className="mx-auto mb-5 w-14 h-14 rounded-full bg-green-500 flex items-center justify-center text-white text-2xl font-bold">
             ✓
           </div>
@@ -85,7 +110,7 @@ function SignUp({ onNavigateSignIn }) {
             Your account has been successfully created.
           </p>
           <button
-            className="w-full py-3 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 active:scale-[0.98] transition-all"
+            className="w-full py-3 rounded-md bg-[#6b4c6a] text-white font-semibold hover:bg-[#5a3f59] active:scale-[0.98] transition-all"
             onClick={() => {
               setForm({ name: '', email: '', password: '', confirmPassword: '', country: '' });
               setErrors({});
@@ -101,8 +126,8 @@ function SignUp({ onNavigateSignIn }) {
 
   // ── Form ────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen w-full bg-slate-100 flex items-center justify-center px-4 py-10">
-      <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-8 w-full max-w-md">
+    <div className="min-h-screen w-full bg-[#f8f9fa] flex items-center justify-center px-4 py-10">
+      <div className="bg-white rounded-sm shadow-sm border border-gray-200 p-8 w-full max-w-md">
 
         {/* Header */}
         <div className="text-center mb-7">
@@ -192,10 +217,12 @@ function SignUp({ onNavigateSignIn }) {
           </Field>
 
           {/* Submit */}
+          {apiError && <p className="text-xs text-red-500 -mb-1">{apiError}</p>}
+
           <button
             id="signup-submit-btn"
             type="submit"
-            className="mt-1 w-full py-3 rounded-lg bg-indigo-600 text-white font-semibold text-base hover:bg-indigo-700 active:scale-[0.98] transition-all"
+            className="mt-1 w-full py-3 rounded-md bg-[#6b4c6a] text-white font-semibold text-base hover:bg-[#5a3f59] active:scale-[0.98] transition-all"
           >
             Sign Up
           </button>
@@ -207,7 +234,7 @@ function SignUp({ onNavigateSignIn }) {
           <button
             type="button"
             onClick={onNavigateSignIn}
-            className="text-indigo-600 font-semibold hover:underline bg-transparent border-none cursor-pointer p-0"
+            className="text-[#6b4c6a] font-semibold hover:text-[#5a3f59] hover:underline bg-transparent border-none cursor-pointer p-0"
           >
             Sign in
           </button>
@@ -221,10 +248,10 @@ function SignUp({ onNavigateSignIn }) {
 // ── Helpers ────────────────────────────────────────────────────────
 function inputClass(hasError) {
   const base =
-    'w-full px-4 py-[10px] border-[1.5px] border-solid rounded-lg text-sm text-slate-800 bg-white outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-offset-0';
+    'w-full px-4 py-[10px] border-[1.5px] border-solid rounded-md text-sm text-slate-800 bg-white outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-offset-0';
   return hasError
     ? `${base} border-red-400 focus:ring-red-200`
-    : `${base} border-slate-300 focus:border-indigo-500 focus:ring-indigo-100`;
+    : `${base} border-gray-300 focus:border-[#6b4c6a] focus:ring-[#e8dfec]`;
 }
 
 function Field({ label, error, children }) {
