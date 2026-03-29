@@ -37,6 +37,14 @@ exports.updateApproval = async (req, res) => {
 
     const approvals = allApprovals.rows;
 
+    // Get company rule
+    const rule = await pool.query(
+      `SELECT * FROM approval_rules WHERE company_id = $1 LIMIT 1`,
+      [req.user.company_id]
+    );
+
+    const ruleData = rule.rows[0];
+
     // If any rejected → reject expense
     if (approvals.some(a => a.status === 'rejected')) {
       await pool.query(
@@ -46,16 +54,51 @@ exports.updateApproval = async (req, res) => {
       return res.json({ message: 'Expense rejected' });
     }
 
-    // If all approved → approve expense
-    if (approvals.every(a => a.status === 'approved')) {
+    let approvedCount = approvals.filter(a => a.status === 'approved').length;
+    let total = approvals.length;
+    
+    // RULE: SPECIFIC APPROVER
+    if (ruleData?.type === 'specific' || ruleData?.type === 'hybrid') {
+      const specificApproved = approvals.find(
+        a => a.approver_id === ruleData.specific_approver_id && a.status === 'approved'
+      );
+
+      if (specificApproved) {
+        await pool.query(
+          `UPDATE expenses SET status='approved' WHERE id=$1`,
+          [expenseId]
+        );
+        return res.json({ message: 'Approved by specific approver rule' });
+      }
+    }
+
+    // RULE: PERCENTAGE
+    
+    if (ruleData?.type === 'specific' || ruleData?.type === 'hybrid') {
+      const specificApproved = approvals.find(
+        a => a.approver_id === ruleData.specific_approver_id && a.status === 'approved'
+      );
+
+      if (specificApproved) {
+        await pool.query(
+          `UPDATE expenses SET status='approved' WHERE id=$1`,
+          [expenseId]
+        );
+        return res.json({ message: 'Approved by specific approver rule' });
+      }
+    }
+
+
+    // fallback: all approved
+    if (approvedCount === total) {
       await pool.query(
         `UPDATE expenses SET status='approved' WHERE id=$1`,
         [expenseId]
       );
-      return res.json({ message: 'Expense approved fully' });
+      return res.json({ message: 'Fully approved' });
     }
 
-    res.json({ message: 'Approval updated' });
+    res.json({ message: 'Approval updated (waiting for others)' });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
